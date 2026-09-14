@@ -52,7 +52,12 @@ def _row_out(row: Registration) -> schemas.RegistrationOut:
     )
 
 
-def create_registration(db: Session, phone: str, password: str | None) -> schemas.RegistrationOut:
+def create_registration(
+    db: Session,
+    phone: str,
+    password: str | None,
+    manual_sms_select: bool = False,
+) -> schemas.RegistrationOut:
     """Create a registration: normalize phone, generate/store password, persist.
 
     A generated password IS returned in cleartext so the operator can email the
@@ -87,6 +92,7 @@ def create_registration(db: Session, phone: str, password: str | None) -> schema
         password=encrypt_secret(secret),
         status=Status.PENDING,
         provider=settings.provider.lower(),
+        manual_sms_select=manual_sms_select,
     )
     db.add(row)
     db.commit()
@@ -150,6 +156,7 @@ def _deliver_otp(reg_id: int) -> None:
                 SendContext(
                     phone=reg.phone,
                     password=password,
+                    manual_sms_select=bool(reg.manual_sms_select),
                 )
             )
         except Exception as exc:

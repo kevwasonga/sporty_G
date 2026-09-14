@@ -22,6 +22,7 @@ def create_registration(payload: schemas.RegisterRequest, db: Session = Depends(
         db=db,
         phone=payload.phone,
         password=(payload.password.strip() or None) if payload.password else None,
+        manual_sms_select=payload.manual_sms_select,
     )
 
 

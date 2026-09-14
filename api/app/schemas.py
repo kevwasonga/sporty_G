@@ -9,6 +9,9 @@ from .security import Status
 class RegisterRequest(BaseModel):
     phone: str = Field(min_length=5, max_length=32)
     password: Optional[str] = Field(default=None, max_length=128)
+    # True → the operator clicks "SMS OTP" in the browser window themselves;
+    # False (default) → the system auto-selects it.
+    manual_sms_select: bool = False
 
 
 class RegistrationOut(BaseModel):
@@ -19,6 +22,7 @@ class RegistrationOut(BaseModel):
     provider: str
     provider_ref: Optional[str] = None
     error: Optional[str] = None
+    manual_sms_select: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -68,6 +72,7 @@ def to_registration_out(row, *, password: Optional[str] = None) -> RegistrationO
         provider=row.provider,
         provider_ref=row.provider_ref,
         error=row.error,
+        manual_sms_select=bool(getattr(row, "manual_sms_select", False)),
         created_at=row.created_at,
         updated_at=row.updated_at,
     )

@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     sportybet_send_timeout_seconds: int = 120
     sportybet_otp_window_seconds: int = 600
     sportybet_captcha_timeout_seconds: int = 600
+    # Manual override: how long to wait for the operator to click "SMS OTP"
+    # themselves in the browser before giving up (manual_sms_select=True).
+    sportybet_manual_select_timeout_seconds: int = 240
 
     @property
     def cors_origin_list(self) -> list[str]:
