@@ -44,41 +44,80 @@ See [`api.md`](api.md) for the full API spec.
 
 ## Quick start
 
-### 0a. One-command launcher (recommended, cross-platform)
+### 0. Zero-dependency ZIP distribution
 
-The tool ships a self-contained launcher that works on **Windows, macOS and
-Linux**. It creates a virtualenv, installs the Python dependencies *and* the
-Playwright Chromium browser, starts the API (which also serves the built UI on
-the same port), and opens your default browser:
-
-```bash
-python run.py                 # or double-click run.bat on Windows
-python run.py --port 9000     # custom port
-python run.py --no-browser    # skip auto-open, print the URL
-```
-
-If no browser can be launched, the launcher prints the URL and a link to
-install Chrome / Firefox / Edge (Windows) / Safari (macOS).
-
-> On the very first run this downloads Python packages + Chromium (a few
-> minutes). Every later start is fast and reuses them.
-
-### 0b. Zero-dependency ZIP distribution
-
-`build_package.py` produces a portable
-`sporty-otp-lab-<date>.zip` that you can hand to someone on **any OS**:
+`build_package.py` produces a portable `sporty-otp-lab-<date>.zip` you can hand
+to someone on **any OS**:
 
 ```bash
 python build_package.py       # -> sporty-otp-lab-2026-09-14.zip
 ```
 
-1. Extract the ZIP anywhere.
-2. Run `run.bat` (Windows) or `python run.py` (macOS/Linux).
-3. It installs everything on first run and opens the UI in the browser.
+The package carries the cross-platform launcher (`run.py` + `run.bat` +
+`run.sh`), the `api/` backend, and the pre-built UI in `ui/dist/` — no source,
+no `node_modules`, no databases, no secrets. The launcher creates a virtualenv,
+installs dependencies **and** Playwright Chromium, starts the API (which also
+serves the built UI on the same port), and opens the default browser.
 
-The package ships only what's needed at runtime: `run.py` / `run.bat` /
-`run.sh`, the `api/` backend, and the pre-built UI in `ui/dist/` — no source,
-no `node_modules`, no databases, no secrets.
+> On the very first run it downloads Python packages + Chromium (a few minutes).
+> Every later start is fast and reuses them.
+
+## Platform guides
+
+### Windows
+
+The only prerequisite is **Python 3.10+** (no Node.js, no manual venv):
+
+1. Install Python — https://www.python.org/downloads/ — and during setup tick
+   **"Add python.exe to PATH"**.
+2. Extract `sporty-otp-lab-<date>.zip` anywhere.
+3. **Double-click `run.bat`** (or open a terminal in the folder and run
+   `py run.py`).
+
+`run.bat` auto-detects Python, fixes a broken virtualenv if needed, installs
+deps + Chromium on first run, starts the server, and opens your default browser
+(Edge/Chrome/Firefox). If Python is missing or is the Microsoft Store stub, it
+prints exactly what to do.
+
+### macOS
+
+1. Ensure Python 3.10+: `brew install python` (or python.org installer).
+2. Extract the ZIP, then run the launcher:
+   ```bash
+   chmod +x run.sh
+   ./run.sh
+   ```
+   or simply `python3 run.py`.
+3. First run installs deps + Chromium, then opens the UI in your browser.
+
+### Linux
+
+1. Ensure Python 3.10+: `sudo apt install python3` (Debian/Ubuntu),
+   `sudo dnf install python3` (Fedora), etc.
+2. Extract the ZIP, `chmod +x run.sh`, and `./run.sh` (or `python3 run.py`).
+3. If the browser doesn't auto-open, the launcher prints the URL and a
+   browser-install link.
+
+### Any platform — CLI options on `run.py`
+
+```bash
+python run.py                 # default port 8011 (auto-increments if busy)
+python run.py --port 9000     # pick a specific port
+python run.py --no-browser    # skip auto-open, just print the URL
+```
+
+If no browser is available, the launcher prints the URL plus install links for
+Chrome / Firefox / Edge. Once running, open the URL it prints — the API and UI
+are served from the same address (e.g. http://127.0.0.1:8011), and the OpenAPI
+docs are at `/docs`.
+
+### Optional: enable API auth
+
+Set `API_TOKEN` in `api/.env`; every request then needs `Authorization: Bearer <token>`.
+
+---
+
+## Development
 
 ### 1. Prerequisites (dev mode)
 
