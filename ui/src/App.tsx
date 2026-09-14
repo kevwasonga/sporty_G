@@ -97,6 +97,7 @@ export default function App() {
               refresh()
               setQueueKey((k) => k + 1)
             }}
+            onAddNumbers={() => setAddOpen(true)}
           />
           <div className="lg:col-span-2 space-y-4">
             <QueueCard refreshKey={queueKey} onAction={() => { refresh(); setQueueKey((k) => k + 1) }} />
@@ -104,7 +105,6 @@ export default function App() {
               registrations={registrations}
               loading={loading}
               onRefresh={refresh}
-              onAddNumbers={() => setAddOpen(true)}
             />
           </div>
         </div>

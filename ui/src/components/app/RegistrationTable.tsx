@@ -8,7 +8,6 @@ import {
   EyeOff,
   Loader2,
   MessageSquare,
-  Plus,
   SendHorizontal,
   Trash2,
   XCircle,
@@ -232,12 +231,10 @@ export function RegistrationTable({
   registrations,
   loading,
   onRefresh,
-  onAddNumbers,
 }: {
   registrations: Registration[]
   loading: boolean
   onRefresh: () => void
-  onAddNumbers: () => void
 }) {
   const [statusFilter, setStatusFilter] = useState<"all" | Status>("all")
 
@@ -262,24 +259,14 @@ export function RegistrationTable({
             <MessageSquare className="size-5" />
             Registrations
           </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onAddNumbers}
-              className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-accent"
-              title="Add many numbers at once"
-            >
-              <Plus className="size-3.5" />
-              Add numbers
-            </button>
-            <button
-              onClick={() => downloadCsv(registrations)}
-              disabled={registrations.length === 0}
-              className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-accent disabled:opacity-50"
-            >
-              <Download className="size-3.5" />
-              Download CSV
-            </button>
-          </div>
+          <button
+            onClick={() => downloadCsv(registrations)}
+            disabled={registrations.length === 0}
+            className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-accent disabled:opacity-50"
+          >
+            <Download className="size-3.5" />
+            Download CSV
+          </button>
         </CardTitle>
         <CardDescription>
           Per client: the OTP the phone received, and verification. SportyBet requires only phone

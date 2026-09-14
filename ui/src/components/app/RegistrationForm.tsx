@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Copy, Eye, EyeOff, KeyRound, RefreshCcw, SendHorizontal } from "lucide-react"
+import { Copy, Eye, EyeOff, KeyRound, Plus, RefreshCcw, SendHorizontal } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -43,7 +43,13 @@ function CredentialRow({ label, value, mono = false }: { label: string; value: s
   )
 }
 
-export function RegistrationForm({ onCreated }: { onCreated: (reg: Registration) => void }) {
+export function RegistrationForm({
+  onCreated,
+  onAddNumbers,
+}: {
+  onCreated: (reg: Registration) => void
+  onAddNumbers: () => void
+}) {
   const [country, setCountry] = useState<string>("234")
   const [national, setNational] = useState("")
   const [password, setPassword] = useState("")
@@ -127,6 +133,14 @@ export function RegistrationForm({ onCreated }: { onCreated: (reg: Registration)
             <p className="text-xs text-muted-foreground">
               Will be registered as <code className="font-mono">+{dial} {nationalDigits || "…"}</code>
             </p>
+            <button
+              type="button"
+              onClick={onAddNumbers}
+              className="flex items-center gap-1.5 rounded-md border border-dashed border-primary/40 bg-primary/5 px-2.5 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+            >
+              <Plus className="size-3.5" />
+              Add many numbers at once
+            </button>
           </div>
 
           <div className="space-y-2">
