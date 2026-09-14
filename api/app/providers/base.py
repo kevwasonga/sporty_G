@@ -8,6 +8,9 @@ class SendContext:
 
     phone: str
     password: str
+    # True → leave the delivery-channel chooser to the operator (they click
+    # "SMS OTP" themselves in the browser); False → system auto-selects it.
+    manual_sms_select: bool = False
 
 
 @dataclass

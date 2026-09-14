@@ -299,6 +299,46 @@ class SportyBetProvider(ProviderAdapter):
         logger.warning("sportybet: could not select SMS OTP channel (overlay/CAPTCHA persisted)")
         return False
 
+    def _wait_manual_sms_select(self, page) -> bool:
+        """Manual mode: wait for the OPERATOR to click "SMS OTP" in the window.
+
+        Auto-selection is the default; some operators prefer to click it
+        themselves (or SportyBet keeps misbehaving for a given session). In this
+        mode we do nothing but watch — park until the chooser is dismissed, give
+        the CAPTCHA the same operator-solve treatment, and fail with a clear
+        message on timeout.
+        """
+        try:
+            page.wait_for_selector(".otp-wrapper .option", timeout=25000)
+        except Exception:
+            # No chooser -> already on the OTP screen or an error state.
+            return self._wait_for_otp_screen(page, 8000)
+
+        logger.info(
+            "sportybet: MANUAL mode — click 'SMS OTP' (the top option) "
+            "in the browser window to request the code."
+        )
+        deadline = time.time() + settings.sportybet_manual_select_timeout_seconds
+        while time.time() < deadline:
+            if self._detect_captcha(page):
+                if settings.sportybet_headless:
+                    return False
+                if not self._wait_captcha_cleared(page):
+                    return False
+                deadline = time.time() + settings.sportybet_manual_select_timeout_seconds
+                continue
+            try:
+                if not page.locator(".otp-wrapper .option").first.is_visible(timeout=1500):
+                    logger.info("sportybet: operator selected the SMS OTP channel manually")
+                    return True
+            except Exception:
+                return True
+            time.sleep(1)
+
+        logger.warning("sportybet: manual SMS selection timed out (%ss)",
+                       settings.sportybet_manual_select_timeout_seconds)
+        return False
+
     def _open_register_form(self, page) -> None:
         """Make sure the 'Register' tab/panel is active (it is by default)."""
         for sel in ("button:has-text('Register')", "a:has-text('Register')"):
@@ -614,15 +654,24 @@ class SportyBetProvider(ProviderAdapter):
                     return
 
                 # SportyBet first asks HOW to deliver the 6-digit code
-                # (SMS / Voice / Telegram). Always pick SMS — the top option,
-                # and the only channel this lab uses.
-                if not self._select_sms_channel(page):
-                    window.report_delivery(
-                        False,
+                # (SMS / Voice / Telegram). Always SMS — the top option. In
+                # manual mode the operator clicks it themselves in the parked
+                # browser window; otherwise the system auto-selects it.
+                if ctx.manual_sms_select:
+                    selected = self._wait_manual_sms_select(page)
+                    fail_msg = (
+                        "Manual SMS selection timed out — no one clicked 'SMS OTP' "
+                        "in the browser window in time. Re-register or retry."
+                    )
+                else:
+                    selected = self._select_sms_channel(page)
+                    fail_msg = (
                         "Could not select SMS OTP: SportyBet's CAPTCHA/overlay kept "
                         "blocking the chooser. Solve it in the browser window and "
-                        "retry.",
+                        "retry (or register again with manual SMS selection)."
                     )
+                if not selected:
+                    window.report_delivery(False, fail_msg)
                     return
 
                 # The OTP input screen appears once SportyBet accepts the form
