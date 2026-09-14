@@ -63,6 +63,42 @@ class DeleteRegistrationsResponse(BaseModel):
     deleted: int
 
 
+class BulkRegisterRequest(BaseModel):
+    # Plain phone-like strings (may include dial code + or national digits).
+    numbers: list[str] = Field(min_length=1, max_length=500)
+    # Applied to numbers that don't already carry a supported dial code.
+    default_country: str = Field(default="234", pattern="^(234|254)$")
+    manual_sms_select: bool = False
+
+
+class BulkImportResponse(BaseModel):
+    created: list[RegistrationOut] = []
+    skipped: list[str] = []
+    errors: list[str] = []
+
+
+class ImportRequest(BaseModel):
+    filename: str = Field(min_length=1, max_length=255)
+    data_base64: str = Field(min_length=1)
+    default_country: str = Field(default="234", pattern="^(234|254)$")
+    manual_sms_select: bool = False
+
+
+class ApproveSkipRequest(BaseModel):
+    # Auto-start the next queued contact's OTP after resolving this one.
+    advance: bool = True
+
+
+class QueueResponse(BaseModel):
+    current: RegistrationOut | None = None
+
+
+class ApproveSkipResponse(BaseModel):
+    updated: RegistrationOut | None = None
+    next: RegistrationOut | None = None
+    next_started: bool = False
+
+
 def to_registration_out(row, *, password: Optional[str] = None) -> RegistrationOut:
     return RegistrationOut(
         id=row.id,

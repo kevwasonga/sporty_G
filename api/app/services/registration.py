@@ -22,6 +22,7 @@ from ..security import (
     normalize_phone,
     otp_valid_window,
 )
+from .imports import parse_contacts
 
 logger = logging.getLogger("sporty.services")
 
@@ -316,3 +317,152 @@ def stats(db: Session) -> schemas.StatsOut:
         provider=settings.provider.lower(),
         password_mode="generated",
     )
+
+
+# ---------------------------------------------------------------------------
+# Queue: bulk add, "next up", approve / skip (with auto-advance).
+# ---------------------------------------------------------------------------
+
+
+def _with_default_country(raw: str, default_country: str) -> str | None:
+    """Normalize a pasted/imported number; prepend the default dial code when
+    the caller didn't include a supported one. Returns None when unusable."""
+    digits = normalize_phone(raw)
+    if not digits:
+        return None
+    if digits.startswith(("234", "254")):
+        return digits
+    if default_country in ("234", "254"):
+        return f"{default_country}{digits}"
+    return None
+
+
+def bulk_create_registrations(
+    db: Session,
+    numbers: list[str],
+    default_country: str = "234",
+    manual_sms_select: bool = False,
+) -> schemas.BulkImportResponse:
+    """Create many registrations at once, tolerating per-row failures.
+
+    Skips rows that already exist (dedup) and rows that fail validation,
+    collecting their raw values so the UI can report exactly what didn't land.
+    """
+    created: list[schemas.RegistrationOut] = []
+    skipped: list[str] = []
+    errors: list[str] = []
+
+    seen: set[str] = set()
+    for raw in numbers:
+        phone = _with_default_country(raw, default_country)
+        if not phone:
+            errors.append(f"{raw}: not a usable phone number")
+            continue
+        if phone in seen:
+            skipped.append(phone)
+            continue
+        seen.add(phone)
+        try:
+            created.append(
+                create_registration(
+                    db=db,
+                    phone=phone,
+                    password=None,
+                    manual_sms_select=manual_sms_select,
+                )
+            )
+        except HTTPException as exc:
+            if exc.status_code == 409:  # duplicate/username collision
+                skipped.append(phone)
+            else:
+                errors.append(f"{raw}: {exc.detail}")
+        except Exception as exc:  # pragma: no cover - defensive
+            errors.append(f"{raw}: {str(exc)[:120]}")
+
+    return schemas.BulkImportResponse(created=created, skipped=skipped, errors=errors)
+
+
+def parse_uploaded_contacts(filename: str, data: bytes) -> list[str]:
+    """Parse an uploaded contact file into phone-like digit strings."""
+    if not data:
+        return []
+    return parse_contacts(filename, data)
+
+
+# Statuses that mean "still being worked" — the queue's current contact is the
+# earliest row in any of these states.
+_UNRESOLVED = [Status.PENDING, Status.SENDING, Status.OTP_SENT]
+
+
+def queue_next(db: Session) -> schemas.RegistrationOut | None:
+    """Return the current contact: the earliest still-unresolved registration."""
+    q = (
+        select(Registration)
+        .where(Registration.status.in_(_UNRESOLVED))
+        .order_by(Registration.created_at.asc(), Registration.id.asc())
+        .limit(1)
+    )
+    row = db.scalars(q).first()
+    return _row_out(row) if row is not None else None
+
+
+def _advance_queue(db: Session) -> tuple[schemas.RegistrationOut | None, bool]:
+    """Auto-start the next pending contact; report what happened.
+
+    Returns ``(next_out, started)`` — ``started`` is True when a fresh OTP
+    request was kicked off for the next line in the queue.
+    """
+    nxt = db.scalars(
+        select(Registration)
+        .where(Registration.status == Status.PENDING)
+        .order_by(Registration.created_at.asc(), Registration.id.asc())
+        .limit(1)
+    ).first()
+    if nxt is not None:
+        request_send_otp(db, nxt)
+        return _row_out(nxt), True
+    # Nothing pending left to start — surface any still-in-flight contact.
+    return queue_next(db), False
+
+
+def approve_registration(
+    db: Session, reg: Registration, advance: bool = True
+) -> tuple[schemas.RegistrationOut, schemas.RegistrationOut | None, bool]:
+    """Operator approved this contact (OTP confirmed); resolve it, then start
+    the next line if ``advance`` is set."""
+    if reg.status == Status.OTP_VERIFIED:
+        raise HTTPException(status_code=409, detail="This contact is already verified.")
+    if reg.status not in (Status.PENDING, Status.SENDING, Status.OTP_SENT, Status.FAILED):
+        raise HTTPException(status_code=409, detail=f"Cannot approve a {reg.status!r} contact.")
+
+    reg.status = Status.OTP_VERIFIED
+    reg.verified_at = dt.datetime.now(dt.timezone.utc)
+    reg.error = None
+    db.commit()
+
+    updated = _row_out(reg)
+    if not advance:
+        return updated, queue_next(db), False
+    nxt, started = _advance_queue(db)
+    return updated, nxt, started
+
+
+def skip_registration(
+    db: Session, reg: Registration, advance: bool = True
+) -> tuple[schemas.RegistrationOut, schemas.RegistrationOut | None, bool]:
+    """Operator skipped this contact (it delayed / went stale); mark it failed,
+    then start the next line if ``advance`` is set."""
+    if reg.status == Status.FAILED:
+        raise HTTPException(status_code=409, detail="This contact is already failed/skipped.")
+    if reg.status not in (Status.PENDING, Status.SENDING, Status.OTP_SENT):
+        raise HTTPException(status_code=409, detail="Cannot skip a resolved contact.")
+
+    reg.status = Status.FAILED
+    reg.error = "Skipped by operator."
+    db.commit()
+
+    updated = _row_out(reg)
+    if not advance:
+        return updated, queue_next(db), False
+    nxt, started = _advance_queue(db)
+    return updated, nxt, started
