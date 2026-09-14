@@ -150,6 +150,11 @@ function RegistrationRow({
     <TableRow>
       <TableCell>
         <div className="font-mono text-sm">{row.phone}</div>
+        {row.manualSmsSelect && (
+          <Badge variant="outline" className="mt-0.5">
+            manual SMS
+          </Badge>
+        )}
       </TableCell>
       <TableCell>
         <StatusBadge status={row.status} />

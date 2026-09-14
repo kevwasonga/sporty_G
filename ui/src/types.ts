@@ -8,6 +8,7 @@ export interface Registration {
   provider: string
   provider_ref: string | null
   error: string | null
+  manualSmsSelect?: boolean
   created_at: string
   updated_at: string
 }

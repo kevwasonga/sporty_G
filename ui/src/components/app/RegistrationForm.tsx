@@ -48,6 +48,7 @@ export function RegistrationForm({ onCreated }: { onCreated: (reg: Registration)
   const [national, setNational] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [manualSmsSelect, setManualSmsSelect] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<Registration | null>(null)
@@ -65,7 +66,11 @@ export function RegistrationForm({ onCreated }: { onCreated: (reg: Registration)
     setError(null)
     setResult(null)
     try {
-      const reg = await api.register(`${dial}${nationalDigits}`, password.trim() || null)
+      const reg = await api.register(
+        `${dial}${nationalDigits}`,
+        password.trim() || null,
+        manualSmsSelect,
+      )
       setResult(reg)
       onCreated(reg)
     } catch (err) {
@@ -154,6 +159,23 @@ export function RegistrationForm({ onCreated }: { onCreated: (reg: Registration)
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
+
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border bg-muted/30 p-3">
+            <input
+              type="checkbox"
+              checked={manualSmsSelect}
+              onChange={(e) => setManualSmsSelect(e.target.checked)}
+              className="mt-0.5 size-4 rounded border-input accent-primary"
+            />
+            <span className="text-xs leading-relaxed">
+              <span className="block font-medium">Select &quot;SMS OTP&quot; manually in the browser</span>
+              <span className="text-muted-foreground">
+                Off (default): the system auto-selects SMS OTP and waits for the code. On: you click
+                &quot;SMS OTP&quot; yourself in the parked browser window when it appears — use this
+                if the system keeps getting stuck on that step.
+              </span>
+            </span>
+          </label>
 
           <Button type="submit" disabled={!valid} className="w-full">
             {loading ? <RefreshCcw className="animate-spin" /> : <SendHorizontal />}

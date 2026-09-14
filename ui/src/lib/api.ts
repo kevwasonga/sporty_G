@@ -21,10 +21,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  register: (phone: string, password: string | null): Promise<Registration> =>
+  register: (phone: string, password: string | null, manualSmsSelect = false): Promise<Registration> =>
     request<Registration>("/api/registrations", {
       method: "POST",
-      body: JSON.stringify({ phone, password: password || null }),
+      body: JSON.stringify({ phone, password: password || null, manual_sms_select: manualSmsSelect }),
     }),
 
   list: (): Promise<Registration[]> => request<Registration[]>("/api/registrations"),
