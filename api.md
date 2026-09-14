@@ -295,13 +295,20 @@ Delete a registration (e.g. to re-do a messed-up client).
 }
 ```
 
-### 7.8 `GET /`
+### 7.8 `GET /api/health`
 
-Health/root probe.
+Health/root probe used by launchers and uptime checks.
 
 ```json
 { "app": "Sporty OTP Lab", "provider": "sportybet" }
 ```
+
+### 7.9 `GET /` (UI)
+
+When the UI was built (`ui/dist` present at startup), the root path serves the
+React SPA from the same origin as the API — no separate frontend process needed
+in production. All `/api/*` routes above still take priority. If `ui/dist` is
+missing the API logs a warning and runs API-only.
 
 ---
 
