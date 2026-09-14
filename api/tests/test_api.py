@@ -5,6 +5,7 @@ lightweight ``FakeProvider`` (test hook in ``app.providers``) that behaves like
 SportyBet would: it "delivers" a code out-of-band and validates it during
 complete_signup, so no browser and no real SMS are involved.
 """
+import base64
 import os
 import time
 
@@ -198,3 +199,83 @@ def test_delete():
     assert res.status_code == 200
     assert res.json()["deleted"] == 1
     assert client.get(f"/api/registrations/{reg['id']}").status_code == 404
+
+
+def test_bulk_create_with_dedupe_and_errors():
+    client = _client()
+    res = client.post(
+        "/api/registrations/bulk",
+        json={
+            "numbers": ["2348012345678", "+234 803 000 1111", "8011234567", "123", "2348012345678"],
+            "default_country": "234",
+        },
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    # 3 usable, 1 duplicate skipped, 1 too-short row reported as an error.
+    assert len(body["created"]) == 3
+    assert body["skipped"] == ["2348012345678"]
+    assert len(body["errors"]) == 1
+    assert "123" in body["errors"][0]
+    assert {c["phone"] for c in body["created"]} == {"2348012345678", "2348030001111", "2348011234567"}
+
+
+def test_queue_next_picks_earliest_pending():
+    client = _client()
+    a = client.post("/api/registrations", json={"phone": "2348012345678"}).json()
+    b = client.post("/api/registrations", json={"phone": "2348023456789"}).json()
+    res = client.get("/api/queue/next")
+    assert res.status_code == 200
+    assert res.json()["current"]["id"] == a["id"]
+
+
+def test_skip_advances_and_starts_next():
+    client = _client()
+    a = client.post("/api/registrations", json={"phone": "2348012345678"}).json()
+    b = client.post("/api/registrations", json={"phone": "2348023456789"}).json()
+
+    res = client.post(f"/api/registrations/{a['id']}/skip", json={"advance": True})
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["updated"]["status"] == "failed"
+    assert body["updated"]["error"] == "Skipped by operator."
+    assert body["next"]["id"] == b["id"]
+    assert body["next_started"] is True
+    # The next one was auto-started by _advance_queue -> now sending/otp_sent.
+    assert body["next"]["status"] in ("sending", "otp_sent")
+
+
+def test_approve_advances_and_starts_next():
+    client = _client()
+    a = client.post("/api/registrations", json={"phone": "2348012345678"}).json()
+    b = client.post("/api/registrations", json={"phone": "2348023456789"}).json()
+
+    res = client.post(f"/api/registrations/{a['id']}/approve", json={"advance": True})
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["updated"]["status"] == "otp_verified"
+    assert body["next"]["id"] == b["id"]
+    assert body["next_started"] is True
+
+
+def test_import_csv_creates_rows():
+    client = _client()
+    csv_data = "phone,name\n+254 712 300 100,Alice\n254 700 200 100,Bob\n"
+    b64 = base64.b64encode(csv_data.encode()).decode()
+    res = client.post(
+        "/api/registrations/import",
+        json={"filename": "contacts.csv", "data_base64": b64, "default_country": "254"},
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert len(body["created"]) == 2
+    assert {c["phone"] for c in body["created"]} == {"254712300100", "254700200100"}
+
+
+def test_import_unsupported_extension_rejected():
+    client = _client()
+    res = client.post(
+        "/api/registrations/import",
+        json={"filename": "contacts.pdf", "data_base64": "bW9jaA==", "default_country": "234"},
+    )
+    assert res.status_code == 400
