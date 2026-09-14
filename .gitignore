@@ -27,3 +27,6 @@ ui/.vite/
 *.log
 .npm/
 .eslintcache
+
+# Built distributions
+sporty-otp-lab-*.zip

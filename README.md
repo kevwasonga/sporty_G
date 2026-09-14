@@ -44,13 +44,49 @@ See [`api.md`](api.md) for the full API spec.
 
 ## Quick start
 
-### 0. Prerequisites
+### 0a. One-command launcher (recommended, cross-platform)
+
+The tool ships a self-contained launcher that works on **Windows, macOS and
+Linux**. It creates a virtualenv, installs the Python dependencies *and* the
+Playwright Chromium browser, starts the API (which also serves the built UI on
+the same port), and opens your default browser:
+
+```bash
+python run.py                 # or double-click run.bat on Windows
+python run.py --port 9000     # custom port
+python run.py --no-browser    # skip auto-open, print the URL
+```
+
+If no browser can be launched, the launcher prints the URL and a link to
+install Chrome / Firefox / Edge (Windows) / Safari (macOS).
+
+> On the very first run this downloads Python packages + Chromium (a few
+> minutes). Every later start is fast and reuses them.
+
+### 0b. Zero-dependency ZIP distribution
+
+`build_package.py` produces a portable
+`sporty-otp-lab-<date>.zip` that you can hand to someone on **any OS**:
+
+```bash
+python build_package.py       # -> sporty-otp-lab-2026-09-14.zip
+```
+
+1. Extract the ZIP anywhere.
+2. Run `run.bat` (Windows) or `python run.py` (macOS/Linux).
+3. It installs everything on first run and opens the UI in the browser.
+
+The package ships only what's needed at runtime: `run.py` / `run.bat` /
+`run.sh`, the `api/` backend, and the pre-built UI in `ui/dist/` — no source,
+no `node_modules`, no databases, no secrets.
+
+### 1. Prerequisites (dev mode)
 
 - Python 3.11+ (built/tested on 3.14)
 - Node.js 20+ and npm
 - `playwright install chromium` (the SportyBet provider drives a real browser)
 
-### 1. Backend
+### 2. Backend
 
 ```bash
 cd api
@@ -72,7 +108,7 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 Keep `SPORTYBET_HEADLESS=false` on your desktop so the browser window is visible
 (needed for CAPTCHA fallback); flip it to `true` for server runs.
 
-### 2. Frontend
+### 3. Frontend
 
 ```bash
 cd ui
@@ -85,7 +121,7 @@ number, hit **Register & request OTP**. The row shows the generated password.
 SportyBet texts the real code to the phone; type it back into the row and the
 adapter feeds it into the same live browser to complete the signup.
 
-### 3. Run the tests
+### 4. Run the tests
 
 ```bash
 cd api && pytest -q
@@ -133,7 +169,8 @@ try to evade CAPTCHAs.
 
 ## Bulk queue workflow
 
-For multiple clients, use **Add numbers** in the table header:
+For multiple clients, use **Add many numbers at once** (under the single-number
+form, next to the phone preview):
 
 - **Paste numbers** — one per line or comma/space separated; rows without a
   supported dial code get the chosen default country's code prepended.
