@@ -1,4 +1,12 @@
-import type { Registration, SendOtpResponse, Stats, VerifyOtpResponse } from "@/types"
+import type {
+  ApproveSkipResponse,
+  BulkImportResult,
+  QueueResponse,
+  Registration,
+  SendOtpResponse,
+  Stats,
+  VerifyOtpResponse,
+} from "@/types"
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? ""
 
@@ -41,6 +49,37 @@ export const api = {
     }),
 
   stats: (): Promise<Stats> => request<Stats>("/api/stats"),
+
+  bulkRegister: (numbers: string[], defaultCountry = "234", manualSmsSelect = false): Promise<BulkImportResult> =>
+    request<BulkImportResult>("/api/registrations/bulk", {
+      method: "POST",
+      body: JSON.stringify({ numbers, default_country: defaultCountry, manual_sms_select: manualSmsSelect }),
+    }),
+
+  importContacts: (
+    filename: string,
+    dataBase64: string,
+    defaultCountry = "234",
+    manualSmsSelect = false,
+  ): Promise<BulkImportResult> =>
+    request<BulkImportResult>("/api/registrations/import", {
+      method: "POST",
+      body: JSON.stringify({ filename, data_base64: dataBase64, default_country: defaultCountry, manual_sms_select: manualSmsSelect }),
+    }),
+
+  queueNext: (): Promise<QueueResponse> => request<QueueResponse>("/api/queue/next"),
+
+  approve: (id: number, advance = true): Promise<ApproveSkipResponse> =>
+    request<ApproveSkipResponse>(`/api/registrations/${id}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ advance }),
+    }),
+
+  skip: (id: number, advance = true): Promise<ApproveSkipResponse> =>
+    request<ApproveSkipResponse>(`/api/registrations/${id}/skip`, {
+      method: "POST",
+      body: JSON.stringify({ advance }),
+    }),
 
   deleteRegistrations: (ids: number[]): Promise<{ deleted: number }> =>
     request<{ deleted: number }>(`/api/registrations/${ids[0]}`, { method: "DELETE" }),

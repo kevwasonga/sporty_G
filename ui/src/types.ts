@@ -38,3 +38,19 @@ export interface Stats {
   provider: string
   password_mode: string
 }
+
+export interface BulkImportResult {
+  created: Registration[]
+  skipped: string[]
+  errors: string[]
+}
+
+export interface QueueResponse {
+  current: Registration | null
+}
+
+export interface ApproveSkipResponse {
+  updated: Registration | null
+  next: Registration | null
+  next_started: boolean
+}
