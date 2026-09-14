@@ -110,6 +110,11 @@ Set `API_TOKEN` in `api/.env`; every request then needs `Authorization: Bearer <
    Telegram); the adapter **auto-selects SMS OTP (the top option)**, the only
    channel this lab uses, and waits for the OTP screen — meaning SportyBet
    accepted the registration and **queued the real SMS**.
+
+   > **Manual override:** tick *"Select SMS OTP manually in the browser"* on the
+   > registration form when you prefer to click the SMS option yourself; the
+   > system then just parks the browser and waits for your click instead of
+   > auto-selecting.
 4. The job parks the browser on the OTP screen and flips the row to `otp_sent`.
 5. The operator reads the code from the client and enters it in the UI.
 6. `complete_signup` feeds the code into the **same live session**, presses
