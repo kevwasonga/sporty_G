@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+dist/
+
+# Env / secrets
+.env
+.env.local
+*.key
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Node
+node_modules/
+ui/dist/
+ui/.vite/
+*.tsbuildinfo
+
+# Logs / temp
+*.log
+.npm/
+.eslintcache
