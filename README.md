@@ -131,6 +131,29 @@ try to evade CAPTCHAs.
 
 ---
 
+## Bulk queue workflow
+
+For multiple clients, use **Add numbers** in the table header:
+
+- **Paste numbers** — one per line or comma/space separated; rows without a
+  supported dial code get the chosen default country's code prepended.
+- **Import file** — CSV / TSV / TXT / XLSX (.xlsx read via stdlib ZIP+XML, no
+  Excel library needed). Reports `created / skipped (duplicates) / errors`.
+
+The **Next up** card shows the earliest unresolved contact. **Approve** marks
+it verified, **Skip to next** marks it failed (`"Skipped by operator."`); both
+then **auto-start the next pending number's OTP delivery** while the current
+one's human-paced delay continues — so several registrations progress
+concurrently instead of serially.
+
+Downloaded CSV contains **phone, status, password** per client.
+
+New endpoints: `POST /api/registrations/bulk`, `POST /api/registrations/import`
+(base64 JSON — no multipart dependency), `GET /api/queue/next`,
+`POST /api/registrations/{id}/approve|skip` (`{advance: bool}`).
+
+---
+
 ## Success-criteria checklist
 
 - [x] Country-scoped registration — **Nigeria (+234)** and **Kenya (+254)** only
